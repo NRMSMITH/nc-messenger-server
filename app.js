@@ -5,7 +5,7 @@ const cors = require('cors');
 
 app.use(cors());
 
-const http = require('http')
+const http = require('http');
 const httpServer  = http.createServer(app)
 
 
@@ -20,7 +20,7 @@ app.get('/', (req, res) => {
 //     message: ""
 // }
 
-const chatData = new Map();
+// const chatData = new Map();
 
 const io = require('socket.io')(httpServer, {
     cors: {
@@ -29,17 +29,40 @@ const io = require('socket.io')(httpServer, {
     }
 });
 
+
+let roomid = ''
+
 io.on('connection', (socket) => {
 io.emit('chat-message', {name: 'global', msg: `${socket.id} has joined`})
+let chatHistory = []
+const users = []
+    socket.on('create-room', (ackFunction) => {
+        roomid = socket.id        
+        ackFunction(roomid)
+    })
+    socket.on("chat-message", (msg, room) => {
+        io.to(room).emit('chat-message', msg)
+        chatHistory.push(msg)
+    })
+    socket.on("chat-history", (args) => {
+        console.log(args)
+    })
+    socket.on('chat-delete', (ackFunction) => {
+        chatHistory = [];
+        ackFunction()
+    })
+    socket.on('join-room', (ackFunction) => {
+        socket.join(roomid)
+        ackFunction(roomid)
+    })
+    socket.emit('chat-history', chatHistory)
 
-    socket.on("chat-message", (args) => {
-        io.emit('chat-message', args)
+    socket.on('user-add', (user, ackFunction) => {
+        users.push(user)
+        ackFunction(user)
     })
 })
 
-//Thinking about storing messages
-//in memory data - array of messages
-//push new message to array
-//
+
 
 module.exports = {httpServer}
